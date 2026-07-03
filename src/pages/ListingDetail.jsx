@@ -1,33 +1,28 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import {
-  subscribeListing,
-  updateListingStatus,
-  subscribeBrandConfig,
-  createReport,
-} from "../services/firestore";
+import { api } from "../services/api";
+import { useFetch } from "../hooks/useFetch";
 import { buildVeroReportText } from "../services/veroReport";
 import { RiskBadge, StatusBadge } from "../components/RiskBadge";
 
 export function ListingDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [listing, setListing] = useState(undefined);
-  const [brand, setBrand] = useState(null);
+  const { data: listing, loading, error, refetch } = useFetch(() => api.getListing(id), [id]);
+  const { data: brand } = useFetch(api.getConfig);
   const [reportText, setReportText] = useState(null);
+  const [reportId, setReportId] = useState(null);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => subscribeListing(id, setListing), [id]);
-  useEffect(() => subscribeBrandConfig(setBrand), []);
-
-  if (listing === undefined) return <div className="empty-state">Loading...</div>;
-  if (listing === null) return <div className="empty-state">Listing not found.</div>;
+  if (loading) return <div className="empty-state">Loading...</div>;
+  if (error || !listing) return <div className="empty-state">Listing not found.</div>;
 
   async function setStatus(status) {
     setBusy(true);
     try {
-      await updateListingStatus(id, status);
+      await api.updateListingStatus(id, status);
+      await refetch();
     } finally {
       setBusy(false);
     }
@@ -36,7 +31,7 @@ export function ListingDetail() {
   async function generateReport() {
     const text = buildVeroReportText({ listing, brand });
     setReportText(text);
-    await createReport({
+    const report = await api.createReport({
       listingId: id,
       itemId: listing.itemId,
       listingSnapshot: {
@@ -47,13 +42,15 @@ export function ListingDetail() {
       },
       reportText: text,
     });
-    await updateListingStatus(id, "report_prepared");
+    setReportId(report.id);
+    await refetch();
   }
 
   async function markReported() {
     setBusy(true);
     try {
-      await updateListingStatus(id, "reported");
+      await api.markReportSubmitted(reportId);
+      await refetch();
     } finally {
       setBusy(false);
     }
@@ -163,7 +160,7 @@ export function ListingDetail() {
                     Open eBay VeRO portal ↗
                   </a>
                 )}
-                <button className="btn btn-primary" disabled={busy} onClick={markReported}>
+                <button className="btn btn-primary" disabled={busy || !reportId} onClick={markReported}>
                   Mark as submitted to eBay
                 </button>
               </div>

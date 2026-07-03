@@ -1,35 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { httpsCallable } from "firebase/functions";
-import { functions } from "../services/firebase";
-import { subscribeListings } from "../services/firestore";
+import { api } from "../services/api";
+import { useFetch } from "../hooks/useFetch";
 import { StatCard } from "../components/StatCard";
 import { TrendChart } from "../components/TrendChart";
 import { RiskBadge } from "../components/RiskBadge";
 
 export function Overview() {
   const navigate = useNavigate();
-  const [listings, setListings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, refetch } = useFetch(api.listListings);
+  const listings = data || [];
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [scanError, setScanError] = useState(null);
 
   useEffect(() => {
-    const unsub = subscribeListings((rows) => {
-      setListings(rows);
-      setLoading(false);
-    });
-    return unsub;
-  }, []);
+    const timer = setInterval(refetch, 60000);
+    return () => clearInterval(timer);
+  }, [refetch]);
 
   const stats = useMemo(() => {
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const active = listings.filter((l) => l.status !== "dismissed" && l.status !== "authorized");
-    const newThisWeek = listings.filter((l) => {
-      const ts = l.firstSeenAt?.toDate ? l.firstSeenAt.toDate().getTime() : 0;
-      return ts >= weekAgo;
-    });
+    const newThisWeek = listings.filter((l) => new Date(l.firstSeenAt).getTime() >= weekAgo);
     const highRisk = active.filter((l) => l.riskScore >= 70);
     const reported = listings.filter((l) => l.status === "reported");
     return {
@@ -54,9 +47,9 @@ export function Overview() {
     setScanResult(null);
     setScanError(null);
     try {
-      const fn = httpsCallable(functions, "runEbayScanNow");
-      const res = await fn();
-      setScanResult(res.data);
+      const result = await api.scanNow();
+      setScanResult(result);
+      await refetch();
     } catch (err) {
       setScanError(err.message || "Scan failed.");
     } finally {

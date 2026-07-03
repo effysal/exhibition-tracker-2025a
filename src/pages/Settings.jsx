@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { subscribeBrandConfig, saveBrandConfig } from "../services/firestore";
+import { api } from "../services/api";
+import { useFetch } from "../hooks/useFetch";
 
 const EMPTY = {
   keywords: ["Opatra", "Opatra London"],
@@ -27,26 +28,23 @@ function fromLines(text) {
 }
 
 export function Settings() {
+  const { data, loading } = useFetch(api.getConfig);
   const [form, setForm] = useState(EMPTY);
-  const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    return subscribeBrandConfig((data) => {
-      if (data) {
-        setForm({
-          ...EMPTY,
-          ...data,
-          trademark: { ...EMPTY.trademark, ...(data.trademark || {}) },
-        });
-      }
-      setLoading(false);
-    });
-  }, []);
+    if (data) {
+      setForm({
+        ...EMPTY,
+        ...data,
+        trademark: { ...EMPTY.trademark, ...(data.trademark || {}) },
+      });
+    }
+  }, [data]);
 
   async function handleSave(e) {
     e.preventDefault();
-    await saveBrandConfig({
+    await api.saveConfig({
       ...form,
       typicalPrice: form.typicalPrice ? Number(form.typicalPrice) : null,
     });

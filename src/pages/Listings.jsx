@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { subscribeListings } from "../services/firestore";
+import { api } from "../services/api";
+import { useFetch } from "../hooks/useFetch";
 import { RiskBadge, StatusBadge } from "../components/RiskBadge";
 
 const STATUS_FILTERS = [
@@ -15,18 +16,15 @@ const STATUS_FILTERS = [
 
 export function Listings() {
   const navigate = useNavigate();
-  const [listings, setListings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, refetch } = useFetch(api.listListings);
+  const listings = data || [];
   const [statusFilter, setStatusFilter] = useState("active");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const unsub = subscribeListings((rows) => {
-      setListings(rows);
-      setLoading(false);
-    });
-    return unsub;
-  }, []);
+    const timer = setInterval(refetch, 60000);
+    return () => clearInterval(timer);
+  }, [refetch]);
 
   const filtered = useMemo(() => {
     let rows = listings;
@@ -100,9 +98,7 @@ export function Listings() {
                   <td>
                     <StatusBadge status={l.status} />
                   </td>
-                  <td>
-                    {l.firstSeenAt?.toDate ? l.firstSeenAt.toDate().toLocaleDateString() : "-"}
-                  </td>
+                  <td>{l.firstSeenAt ? new Date(l.firstSeenAt).toLocaleDateString() : "-"}</td>
                 </tr>
               ))}
             </tbody>

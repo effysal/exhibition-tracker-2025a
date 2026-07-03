@@ -1,16 +1,9 @@
-const {defineSecret} = require("firebase-functions/params");
-
-// Configured once via `firebase functions:secrets:set EBAY_CLIENT_ID` etc.
-// These come from a developer.ebay.com application (Browse API, production keys).
-const EBAY_CLIENT_ID = defineSecret("EBAY_CLIENT_ID");
-const EBAY_CLIENT_SECRET = defineSecret("EBAY_CLIENT_SECRET");
-
 const PAGE_LIMIT = 200;
 const TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token";
 const SEARCH_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search";
 
-// Cached in the function instance between invocations - avoids one OAuth
-// round trip per search when a warm instance handles consecutive scans.
+// Cached in the process between invocations - avoids one OAuth round trip
+// per search within the same scan run.
 let cachedToken = null;
 
 async function getAccessToken() {
@@ -18,9 +11,13 @@ async function getAccessToken() {
     return cachedToken.token;
   }
 
-  const basicAuth = Buffer.from(
-      `${EBAY_CLIENT_ID.value()}:${EBAY_CLIENT_SECRET.value()}`,
-  ).toString("base64");
+  const clientId = process.env.EBAY_CLIENT_ID;
+  const clientSecret = process.env.EBAY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error("EBAY_CLIENT_ID / EBAY_CLIENT_SECRET are not configured");
+  }
+
+  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
   const res = await fetch(TOKEN_URL, {
     method: "POST",
@@ -50,7 +47,7 @@ async function getAccessToken() {
  * Searches eBay's Browse API for a keyword in a given marketplace, paginating
  * up to `maxPages` pages of `PAGE_LIMIT` results each.
  */
-async function searchListings({keyword, marketplaceId, maxPages = 3}) {
+export async function searchListings({ keyword, marketplaceId, maxPages = 3 }) {
   const token = await getAccessToken();
   const results = [];
   let offset = 0;
@@ -84,5 +81,3 @@ async function searchListings({keyword, marketplaceId, maxPages = 3}) {
 
   return results;
 }
-
-module.exports = {EBAY_CLIENT_ID, EBAY_CLIENT_SECRET, searchListings};

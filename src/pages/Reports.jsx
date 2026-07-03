@@ -1,19 +1,17 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useState } from "react";
 import { Link } from "react-router-dom";
-import { subscribeReports, markReportSubmitted } from "../services/firestore";
+import { api } from "../services/api";
+import { useFetch } from "../hooks/useFetch";
 
 export function Reports() {
-  const [reports, setReports] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, refetch } = useFetch(api.listReports);
+  const reports = data || [];
   const [expanded, setExpanded] = useState(null);
 
-  useEffect(() => {
-    const unsub = subscribeReports((rows) => {
-      setReports(rows);
-      setLoading(false);
-    });
-    return unsub;
-  }, []);
+  async function markSubmitted(id) {
+    await api.markReportSubmitted(id);
+    await refetch();
+  }
 
   return (
     <div>
@@ -59,7 +57,7 @@ export function Reports() {
                         {r.status === "submitted" ? "Submitted" : "Draft"}
                       </span>
                     </td>
-                    <td>{r.createdAt?.toDate ? r.createdAt.toDate().toLocaleString() : "-"}</td>
+                    <td>{r.createdAt ? new Date(r.createdAt).toLocaleString() : "-"}</td>
                     <td>
                       <Link to={`/listings/${r.listingId}`} onClick={(e) => e.stopPropagation()}>
                         View listing →
@@ -75,7 +73,7 @@ export function Reports() {
                             className="btn btn-primary"
                             onClick={(e) => {
                               e.stopPropagation();
-                              markReportSubmitted(r.id);
+                              markSubmitted(r.id);
                             }}
                           >
                             Mark as submitted

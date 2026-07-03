@@ -1,8 +1,9 @@
 import { NavLink } from "react-router-dom";
-import { signOut } from "firebase/auth";
-import { auth } from "../services/firebase";
+import { useAuth } from "../context/AuthContext";
 
 export function Navigation() {
+  const { logout } = useAuth();
+
   return (
     <div className="topnav">
       <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
@@ -16,7 +17,7 @@ export function Navigation() {
           <NavLink to="/settings">Settings</NavLink>
         </nav>
       </div>
-      <button className="btn" onClick={() => signOut(auth)}>
+      <button className="btn" onClick={logout}>
         Sign out
       </button>
     </div>

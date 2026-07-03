@@ -2,17 +2,17 @@
 // verdict - every flagged listing still needs a human to confirm infringement
 // before anything is reported to eBay (see README).
 
-const HIGH_RISK_TERMS = [
+export const HIGH_RISK_TERMS = [
   "replica", "fake", "copy", "dupe", "knockoff", "knock off", "aaa quality",
   "1:1", "mirror image", "inspired by", "compatible with", "generic",
   "unbranded", "not genuine", "imitation", "clone",
 ];
 
-const BULK_TERMS = ["job lot", "joblot", "wholesale", "bulk lot"];
+export const BULK_TERMS = ["job lot", "joblot", "wholesale", "bulk lot"];
 
-function scoreListing(item, {keyword, authorizedSellers = [], typicalPrice = null}) {
+export function scoreListing(item, { keyword, authorizedSellers = [], typicalPrice = null }) {
   const title = (item.title || "").toLowerCase();
-  const sellerUsername = item.seller && item.seller.username || "unknown";
+  const sellerUsername = (item.seller && item.seller.username) || "unknown";
   const reasons = [`Matched brand keyword "${keyword}" in listing title/description`];
 
   if (authorizedSellers.includes(sellerUsername)) {
@@ -54,7 +54,5 @@ function scoreListing(item, {keyword, authorizedSellers = [], typicalPrice = nul
     reasons.push("No authorized-seller allowlist configured yet - all sellers are currently flagged");
   }
 
-  return {score: Math.min(score, 100), reasons, autoStatus: null};
+  return { score: Math.min(score, 100), reasons, autoStatus: null };
 }
-
-module.exports = {scoreListing, HIGH_RISK_TERMS, BULK_TERMS};

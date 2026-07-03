@@ -28,9 +28,8 @@ export function TrendChart({ listings }) {
     const days = lastNDays(DAYS);
     const byDay = Object.fromEntries(days.map((d) => [d, 0]));
     for (const l of listings) {
-      const ts = l.firstSeenAt?.toDate ? l.firstSeenAt.toDate() : null;
-      if (!ts) continue;
-      const key = ts.toISOString().slice(0, 10);
+      if (!l.firstSeenAt) continue;
+      const key = new Date(l.firstSeenAt).toISOString().slice(0, 10);
       if (key in byDay) byDay[key] += 1;
     }
     const counts = days.map((d) => byDay[d]);

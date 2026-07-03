@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../services/firebase";
 import { useAuth } from "../context/AuthContext";
 
 export function Login() {
-  const { user } = useAuth();
+  const { user, login } = useAuth();
   const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,7 +19,7 @@ export function Login() {
     setError(null);
     setSubmitting(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await login(email, password);
     } catch (err) {
       setError("Sign-in failed. Check your email and password.");
     } finally {
