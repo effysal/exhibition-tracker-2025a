@@ -1,1 +1,8 @@
 node_modules
+dist
+.env
+.env.local
+functions/.env
+functions/.env.*
+.firebase
+*.local
